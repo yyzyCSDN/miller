@@ -39,6 +39,8 @@ const (
 	NodeTypeEmitFStatement            = "EmitFStatement"
 	NodeTypeBeginBlock                = "BeginBlock"
 	NodeTypeEndBlock                  = "EndBlock"
+	NodeTypeAttemptBlock              = "AttemptBlock"
+	NodeTypeRejectStatement           = "RejectStatement"
 	NodeTypeCondBlock                 = "CondBlock"
 	NodeTypeIfChain                   = "IfChain"
 	NodeTypeIfItem                    = "IfItem"

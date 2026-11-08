@@ -430,9 +430,26 @@ func (root *RootNode) ProcessEndOfStream() error {
 	return nil
 }
 
-func (root *RootNode) ExecuteBeginBlocks(state *runtime.State) error {
+// convertUncaughtRejectPanic turns a reject (or trial guard) panic that escaped
+// every attempt block into an ordinary DSL error, while letting any other
+// panic (an internal program fault) continue to propagate.
+func convertUncaughtRejectPanic(errp *error) {
+	if r := recover(); r != nil {
+		if rej, ok := r.(*runtime.AttemptReject); ok {
+			*errp = fmt.Errorf(
+				"mlr: reject used outside of an attempt block: %s",
+				rej.Reason,
+			)
+			return
+		}
+		panic(r)
+	}
+}
+
+func (root *RootNode) ExecuteBeginBlocks(state *runtime.State) (err error) {
+	defer convertUncaughtRejectPanic(&err)
 	for _, beginBlock := range root.beginBlocks {
-		_, err := beginBlock.Execute(state)
+		_, err = beginBlock.Execute(state)
 		if err != nil {
 			return err
 		}
@@ -441,13 +458,15 @@ func (root *RootNode) ExecuteBeginBlocks(state *runtime.State) error {
 }
 
 func (root *RootNode) ExecuteMainBlock(state *runtime.State) (outrec *mlrval.Mlrmap, err error) {
+	defer convertUncaughtRejectPanic(&err)
 	_, err = root.mainBlock.Execute(state)
 	return state.Inrec, err
 }
 
-func (root *RootNode) ExecuteEndBlocks(state *runtime.State) error {
+func (root *RootNode) ExecuteEndBlocks(state *runtime.State) (err error) {
+	defer convertUncaughtRejectPanic(&err)
 	for _, endBlock := range root.endBlocks {
-		_, err := endBlock.Execute(state)
+		_, err = endBlock.Execute(state)
 		if err != nil {
 			return err
 		}
@@ -464,6 +483,7 @@ func (root *RootNode) ExecuteEndBlocks(state *runtime.State) error {
 
 // This is the 'execute once' part of that.
 func (root *RootNode) ExecuteREPLImmediate(state *runtime.State) (outrec *mlrval.Mlrmap, err error) {
+	defer convertUncaughtRejectPanic(&err)
 	_, err = root.replImmediateBlock.ExecuteFrameless(state)
 	return state.Inrec, err
 }

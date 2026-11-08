@@ -48,8 +48,17 @@ type State struct {
 	// Returns (record, context, hasMore). When hasMore is false, record and context are for end-of-stream.
 	NextRecordFunc func() (*mlrval.Mlrmap, *types.Context, bool)
 
+	// TrialController supports mark/rewind of the input record stream for
+	// attempt blocks that call next(). Nil outside mlr script mode.
+	TrialController TrialController
+
 	// AtEndOfStream is set when next() returns false. Makes $* evaluate to boolean false.
 	AtEndOfStream bool
+
+	// trialFrames is the stack of active attempt-block output buffers. It is
+	// empty when no attempt block is executing, so the no-attempt code path
+	// has zero allocation overhead.
+	trialFrames []*trialFrame
 }
 
 func NewEmptyState(options *cli.TOptions, strictMode bool) *State {

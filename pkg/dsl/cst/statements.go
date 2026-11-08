@@ -105,6 +105,11 @@ func (root *RootNode) BuildStatementNode(
 	case asts.NodeType(NodeTypeReturnStatement):
 		return root.BuildReturnNode(astNode)
 
+	case asts.NodeType(NodeTypeAttemptBlock):
+		return root.BuildAttemptNode(astNode)
+	case asts.NodeType(NodeTypeRejectStatement):
+		return root.BuildRejectNode(astNode)
+
 	default:
 		return nil, fmt.Errorf("at CST BuildStatementNode: unhandled AST node %s", string(astNode.Type))
 	}

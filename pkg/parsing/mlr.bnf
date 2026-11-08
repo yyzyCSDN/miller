@@ -56,6 +56,9 @@ kw_do           ::= 'd' 'o' ;
 kw_break        ::= 'b' 'r' 'e' 'a' 'k' ;
 kw_continue     ::= 'c' 'o' 'n' 't' 'i' 'n' 'u' 'e' ;
 kw_return       ::= 'r' 'e' 't' 'u' 'r' 'n' ;
+kw_attempt      ::= 'a' 't' 't' 'e' 'm' 'p' 't' ;
+kw_recover      ::= 'r' 'e' 'c' 'o' 'v' 'e' 'r' ;
+kw_reject       ::= 'r' 'e' 'j' 'e' 'c' 't' ;
 kw_call         ::= 'c' 'a' 'l' 'l' ;
 kw_func         ::= 'f' 'u' 'n' 'c' ;
 kw_subr         ::= 's' 'u' 'b' 'r' ;
@@ -225,7 +228,7 @@ StatementBlockInBraces ::= lbrace StatementBlock rbrace -> { "parent": 1, "child
 # Statements ending with }; no semicolon required before next statement.
 BracefulStatement ::=
     BeginBlock | EndBlock | CondBlock | IfChain | WhileLoop | ForLoop
-  | NamedFunctionDefinition | SubroutineDefinition
+  | NamedFunctionDefinition | SubroutineDefinition | AttemptBlock
 ;
 
 # Statements not ending with }; semicolon required after when following BracefulStatement.
@@ -234,7 +237,8 @@ BracelessStatement ::=
   | PrintStatement | PrintnStatement | EprintStatement | EprintnStatement
   | DumpStatement | EdumpStatement
   | TeeStatement | Emit1Statement | EmitStatement | EmitPStatement | EmitFStatement
-  | DoWhileLoop | BreakStatement | ContinueStatement | ReturnStatement | SubroutineCallsite
+  | DoWhileLoop | BreakStatement | ContinueStatement | ReturnStatement | RejectStatement
+  | SubroutineCallsite
 ;
 
 Statement ::=
@@ -257,6 +261,7 @@ Statement ::=
   | BreakStatement
   | ContinueStatement
   | ReturnStatement
+  | RejectStatement
   | SubroutineCallsite
   | BeginBlock
   | EndBlock
@@ -266,6 +271,7 @@ Statement ::=
   | ForLoop
   | NamedFunctionDefinition
   | SubroutineDefinition
+  | AttemptBlock
 ;
 
 CompoundAssignOp ::=
@@ -448,6 +454,19 @@ ContinueStatement ::= kw_continue -> { "parent": 0, "children": [], "type": "Con
 ReturnStatement ::=
     kw_return        -> { "parent": 0, "children": [], "type": "ReturnStatement" }
   | kw_return Rvalue -> { "parent": 0, "children": [1], "type": "ReturnStatement" }
+;
+
+# Rollbackable trial block. Children: attempt body (StatementBlockInBraces),
+# the recover reason-variable name (a LocalVariable), and the recover body.
+AttemptBlock ::=
+  kw_attempt StatementBlockInBraces kw_recover lparen non_sigil_name rparen StatementBlockInBraces
+  -> { "parent": 0, "children": [1, 4, 6], "type": "AttemptBlock" }
+;
+
+# Explicit rejection of the current trial. The rvalue must evaluate to a
+# string; it becomes the recover block's reason variable.
+RejectStatement ::=
+  kw_reject Rvalue -> { "parent": 0, "children": [1], "type": "RejectStatement" }
 ;
 
 SubroutineName ::= non_sigil_name ;

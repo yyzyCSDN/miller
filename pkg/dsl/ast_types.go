@@ -87,6 +87,8 @@ const (
 
 	NodeTypeBeginBlock           TNodeType = "begin block"
 	NodeTypeEndBlock             TNodeType = "end block"
+	NodeTypeAttemptBlock         TNodeType = "attempt block"
+	NodeTypeRejectStatement      TNodeType = "reject statement"
 	NodeTypeIfChain              TNodeType = "if-chain"
 	NodeTypeIfItem               TNodeType = "if-item"
 	NodeTypeCondBlock            TNodeType = "cond block"

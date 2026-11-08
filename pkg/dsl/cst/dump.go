@@ -212,6 +212,12 @@ func (node *DumpStatementNode) dumpToStdout(
 	outputString string,
 	state *runtime.State,
 ) error {
+	// Inside an attempt block, unredirected stdout is retained until the
+	// outermost trial commits; it is discarded on rollback.
+	if bufferTrialStdoutText(state, outputString) {
+		return nil
+	}
+
 	// Insert the string into the record-output stream, so that goroutine can
 	// print it, resulting in deterministic output-ordering.
 	//
@@ -229,6 +235,9 @@ func (node *DumpStatementNode) dumpToStderr(
 	outputString string,
 	state *runtime.State,
 ) error {
+	if bufferTrialStderrText(state, outputString) {
+		return nil
+	}
 	fmt.Fprint(os.Stderr, outputString)
 	return nil
 }
@@ -237,6 +246,10 @@ func (node *DumpStatementNode) dumpToFileOrPipe(
 	outputString string,
 	state *runtime.State,
 ) error {
+	// File and pipe redirections are external effects: reject the trial
+	// before any handle is opened or byte written.
+	guardTrialExternalEffect(state, "file/pipe output redirection")
+
 	redirectorTarget := node.redirectorTargetEvaluable.Evaluate(state)
 	if !redirectorTarget.IsString() {
 		return fmt.Errorf(

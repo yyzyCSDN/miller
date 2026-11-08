@@ -63,6 +63,21 @@ func (node *Emit1StatementNode) Execute(state *runtime.State) (*BlockExitPayload
 		return nil, nil
 	}
 
+	if state.InTrial() {
+		// Retain the emitted record for publication at outermost commit; it
+		// is discarded if the trial rolls back.
+		rac := types.NewRecordAndContext(valueAsMap, state.Context)
+		bufferTrialDeferred(state, func() error {
+			if state.OutputRecordsAndContexts != nil {
+				*state.OutputRecordsAndContexts = append(*state.OutputRecordsAndContexts, rac)
+			} else {
+				fmt.Println(valueAsMap.String())
+			}
+			return nil
+		})
+		return nil, nil
+	}
+
 	if state.OutputRecordsAndContexts != nil {
 		*state.OutputRecordsAndContexts = append(*state.OutputRecordsAndContexts, types.NewRecordAndContext(valueAsMap, state.Context))
 	} else {

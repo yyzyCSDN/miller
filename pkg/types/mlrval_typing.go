@@ -100,3 +100,18 @@ func (tvar *TypeGatedMlrvalVariable) Assign(value *mlrval.Mlrval) error {
 func (tvar *TypeGatedMlrvalVariable) Unassign() {
 	tvar.value = mlrval.ABSENT
 }
+
+// Snapshot returns an independent deep copy of the gated variable, including
+// the contained value (maps/arrays are deep-copied; see Mlrval.Copy). Used by
+// the DSL attempt-block rollback machinery. The type-gate name is immutable
+// after construction and is shared, not copied.
+func (tvar *TypeGatedMlrvalVariable) Snapshot() *TypeGatedMlrvalVariable {
+	var value *mlrval.Mlrval
+	if tvar.value != nil {
+		value = tvar.value.Copy()
+	}
+	return &TypeGatedMlrvalVariable{
+		typeGatedMlrvalName: tvar.typeGatedMlrvalName,
+		value:               value,
+	}
+}

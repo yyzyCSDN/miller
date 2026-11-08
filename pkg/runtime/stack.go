@@ -192,6 +192,64 @@ func (stack *Stack) UnsetIndexed(
 	stack.head.unsetIndexed(stackVariable, indices)
 }
 
+// Snapshot returns an independent deep copy of the entire stack (all
+// framesets, frames, and their type-gated variables). Used by the DSL
+// attempt-block rollback machinery. The reuse pools are intentionally not
+// copied: they are performance-only and must never share frame storage with
+// a live stack.
+func (stack *Stack) Snapshot() *Stack {
+	frameSets := make([]*StackFrameSet, len(stack.stackFrameSets))
+	for i, frameset := range stack.stackFrameSets {
+		frameSets[i] = frameset.snapshot()
+	}
+	return &Stack{
+		stackFrameSets: frameSets,
+		head:           frameSets[len(frameSets)-1],
+		pool:           nil,
+	}
+}
+
+// RestoreFrom mutates the receiver in place to become a deep copy of the
+// snapshot. In-place (rather than pointer swap) is required because long-lived
+// callsites hold the State.Stack pointer.
+func (stack *Stack) RestoreFrom(snapshot *Stack) {
+	frameSets := make([]*StackFrameSet, len(snapshot.stackFrameSets))
+	for i, frameset := range snapshot.stackFrameSets {
+		frameSets[i] = frameset.snapshot()
+	}
+	stack.stackFrameSets = frameSets
+	stack.head = frameSets[len(frameSets)-1]
+	stack.pool = nil
+}
+
+// snapshot returns a deep copy of the frameset (all frames and variables).
+func (frameset *StackFrameSet) snapshot() *StackFrameSet {
+	frames := make([]*StackFrame, len(frameset.stackFrames))
+	for i, frame := range frameset.stackFrames {
+		frames[i] = frame.snapshot()
+	}
+	return &StackFrameSet{
+		stackFrames: frames,
+	}
+}
+
+// snapshot returns a deep copy of the frame, preserving variable names and
+// their type constraints.
+func (frame *StackFrame) snapshot() *StackFrame {
+	vars := make([]*types.TypeGatedMlrvalVariable, len(frame.vars))
+	for i, tvar := range frame.vars {
+		vars[i] = tvar.Snapshot()
+	}
+	namesToOffsets := make(map[string]int, len(frame.namesToOffsets))
+	for name, offset := range frame.namesToOffsets {
+		namesToOffsets[name] = offset
+	}
+	return &StackFrame{
+		vars:           vars,
+		namesToOffsets: namesToOffsets,
+	}
+}
+
 // STACKFRAMESET METHODS
 
 const stackFrameSetInitCap = 6

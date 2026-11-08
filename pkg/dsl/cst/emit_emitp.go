@@ -84,6 +84,11 @@ type EmitXStatementNode struct {
 	// the redirectorTargetEvaluable expression.
 	outputHandlerManager output.OutputHandlerManager
 
+	// externalRedirect is true for file (>/>>) and pipe (|) targets, as
+	// opposed to the built-in stdout/stderr targets. External redirects are
+	// rejected inside attempt blocks; stdout/stderr writes are buffered.
+	externalRedirect bool
+
 	// For code-reuse between executors.
 	isEmitP  bool
 	isLashed bool
